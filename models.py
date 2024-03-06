@@ -22,3 +22,13 @@ class Maestros(db.Model):
     numt=db.Column(db.String(10))
     create_date=db.Column(db.DateTime,default=datetime.datetime.now)
 
+class Pizzas(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100))
+    direccion = db.Column(db.String(100))
+    telefono = db.Column(db.String(20))
+    tamanio = db.Column(db.String(20))
+    ingredientes = db.Column(db.String(200))
+    num = db.Column(db.Integer)
+    subtotal = db.Column(db.Float)
+    create_date=db.Column(db.DateTime,default=datetime.datetime.now)

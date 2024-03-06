@@ -1,5 +1,5 @@
 from wtforms import Form
-from wtforms import StringField, TextAreaField, SelectField, RadioField, EmailField, IntegerField
+from wtforms import StringField, TextAreaField, SelectField, RadioField, EmailField, IntegerField, SelectMultipleField,widgets
 from wtforms import validators
 
 class UserForm(Form):
@@ -50,4 +50,34 @@ class UserForm2(Form):
         validators.Regexp('^[0-9]+$', message="Debe contener solo dígitos")
     ])
 
+
+class PizzaForm(Form):
+    id=IntegerField('id')
+    nombre=StringField("NOMBRE",[validators.DataRequired(message='el campo es requerido'),
+                                 validators.length(min=4,max=20,message='ingresa nombre valido')])
     
+    direccion = StringField('Direccion',[validators.DataRequired(message='el campo es requerido'),
+                                 validators.length(min=4,max=35,message='ingresa una direccion valida')])
+    
+    telefono = StringField("Numero Telefonico", [
+        validators.Length(min=10, max=10, message="Debe tener exactamente 10 dígitos"),
+        validators.Regexp('^[0-9]+$', message="Debe contener solo dígitos")])
+    
+    num = IntegerField('Numero de Pizzas', [
+        validators.number_range(min=1, max=99, message="Valor no valido")
+    ])
+
+    tamanio = RadioField('Elige el tamaño de la pizza', [validators. DataRequired(message = 'The field is required')], 
+        choices = [
+        ('chica','chica'),
+        ('mediana','mediana'),
+        ('grande','grande')
+    ])
+
+    ingredientes = SelectMultipleField('Elige los ingredientes de la pizza', [
+        validators.DataRequired(message='The field is required')
+    ], choices=[
+        ('jamon', 'jamon'),
+        ('pina', 'piña'),
+        ('champiniones', 'champiñones')
+    ], widget=widgets.ListWidget(prefix_label=False), option_widget=widgets.CheckboxInput())
