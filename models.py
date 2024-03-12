@@ -28,3 +28,5 @@ class Pizzas(db.Model):
     subtotal = db.Column(db.Float)
     fecha_pedido = db.Column(db.DateTime)
     fecha_registro_pedido = db.Column(db.DateTime, default=datetime.now)
+
+#ESTE COMIT LO HAGO POR QUE PUSE MAL LA DESCRIPCION DEL ANTERIOR COMIT PERO YA ESTA COMPLETO LA PRACTICA DE LA PIZZERIA 
