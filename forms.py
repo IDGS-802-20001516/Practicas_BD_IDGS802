@@ -50,7 +50,7 @@ class UserForm2(Form):
         validators.Regexp('^[0-9]+$', message="Debe contener solo dígitos")
     ])
 
-
+#ESTE COMIT LO HAGO POR QUE PUSE MAL LA DESCRIPCION DEL ANTERIOR COMIT PERO YA ESTA COMPLETO LA PRACTICA DE LA PIZZERIA 
 class PizzaForm(Form):
     id=IntegerField('id')
     nombre=StringField("Nombre",[validators.DataRequired(message='el campo es requerido'),

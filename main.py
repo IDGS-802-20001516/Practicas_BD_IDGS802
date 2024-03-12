@@ -195,7 +195,7 @@ def confirmar_pedido():
         flash("No se encontraron pedidos para confirmar.", "warning")
 
     return redirect(url_for("addp"))
-
+#ESTE COMIT LO HAGO POR QUE PUSE MAL LA DESCRIPCION DEL ANTERIOR COMIT PERO YA ESTA COMPLETO LA PRACTICA DE LA PIZZERIA 
 
 @app.route("/pedidosdd", methods=["GET", "POST"])
 def pedidosdd():
