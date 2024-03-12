@@ -4,11 +4,17 @@ from flask_wtf.csrf import CSRFProtect
 from flask import g 
 from config import DevelopmentConfig
 from flask import flash
+from sqlalchemy import func
 from models import db
 from models import Maestros
 from models import Alumnos
 from models import Pizzas
 from datetime import datetime, date
+from datetime import datetime, timedelta
+from flask import session
+
+from collections import defaultdict
+
 app=Flask(__name__)
 app.config.from_object(DevelopmentConfig)
 csrf=CSRFProtect()
@@ -45,7 +51,7 @@ def addp():
     tamanio = ''
     ingredientes = ''
     subtotal = 0  
-
+    fecha_pedido = ''  
     if request.method == "POST":
         if addp_form.validate():
             nombre = addp_form.nombre.data
@@ -54,6 +60,7 @@ def addp():
             num = addp_form.num.data
             tamanio = addp_form.tamanio.data
             ingredientes = ", ".join(addp_form.ingredientes.data)
+            fecha_pedido = addp_form.fecha.data  
 
             if tamanio == "chica":
                 subtotal += 40 * num  
@@ -65,79 +72,142 @@ def addp():
             subtotal += 10 * len(addp_form.ingredientes.data) * num
 
             with open("pizza.txt", "a") as archivo:
-                archivo.write(f"{nombre}-{direccion}-{telefono}-{num}-{tamanio}-{ingredientes}-{subtotal}\n")
+                archivo.write(f"{nombre}@{direccion}@{telefono}@{num}@{tamanio}@{ingredientes}@{fecha_pedido}@{subtotal}\n")
+            
+    if request.method == "GET" and request.args.get("borrar"):
+        indices_a_borrar = request.args.getlist("borrar")
+        with open("pizza.txt", "r") as archivo:
+            lineas = archivo.readlines()
+        with open("pizza.txt", "w") as archivo:
+            for i, linea in enumerate(lineas):
+                if str(i) not in indices_a_borrar:
+                    archivo.write(linea)
 
-
-            return redirect(url_for("addp"))
-
-        elif "delete" in request.form:
-            index = int(request.form["delete"])
-
-            with open("pizza.txt", "r") as archivo:
-                lineas = archivo.readlines()
-
-            del lineas[index]
-
-            with open("pizza.txt", "w") as archivo:
-                archivo.writelines(lineas)
+ 
+    with open("pizza.txt", "r") as archivo:
+        lineas = archivo.readlines()
+        if lineas:
+            ultimo_pedido = lineas[-1].strip().split("@")
+            nombre = ultimo_pedido[0]
+            direccion = ultimo_pedido[1]
+            telefono = ultimo_pedido[2]
+            num = ultimo_pedido[3]
+            tamanio = ultimo_pedido[4]
+            ingredientes = ultimo_pedido[5]
+            fecha_pedido = ultimo_pedido[6]
+            print (fecha_pedido)
+            subtotal = float(ultimo_pedido[7])
 
     with open("pizza.txt", "r") as archivo:
         lineas = archivo.readlines()
-        datos = [linea.strip().split("-") for linea in lineas]
-
-
-    total = sum(float(linea.split("-")[-1]) for linea in lineas)
-
-    flash(f"Total de el Pedido: ${total}", "info")
+        datos = [linea.strip().split("@") for linea in lineas]
 
     datos_con_indices = [(i, dato) for i, dato in enumerate(datos)]
 
-    return render_template('pizza.html', form=addp_form, datos=datos_con_indices, nombre=nombre, direccion=direccion,
-                            telefono=telefono, num=num, tamanio=tamanio, ingredientes=ingredientes, subtotal=subtotal)
+    total_pedidos = sum(float(dato[7]) for dato in datos)
 
-@app.route("/confirmar_pedido", methods=["POST"])
-def confirmar_pedido():
+    fecha_actual = date.today()
+    pedidos = Pizzas.query.filter(func.DATE(Pizzas.fecha_registro_pedido) == fecha_actual).all()
+    total_ventas = db.session.query(func.sum(Pizzas.subtotal)).filter(func.DATE(Pizzas.fecha_registro_pedido) == fecha_actual).scalar()
+
+    return render_template('pizza.html', form=addp_form, datos=datos_con_indices, total_ventas=total_ventas, pedidos=pedidos, nombre=nombre, direccion=direccion,
+                            telefono=telefono, num=num, tamanio=tamanio, ingredientes=ingredientes, subtotal=subtotal, total_pedidos=total_pedidos, fecha_pedido=fecha_pedido)
+@app.route("/buscar_pedidos", methods=["GET", "POST"])
+def buscar_pedidos():
+    pedidos = []
+    total_subtotal = 0
+
+    if request.method == "POST":
+        busqueda_dia = request.form.get("busqueda_dia")
+        busqueda_mes = request.form.get("busqueda_mes")
+
+        if busqueda_dia:
+            if busqueda_dia.isdigit():
+                dia_numero = int(busqueda_dia)
+                if 1 <= dia_numero <= 7:
+                    dia_index_sqlalchemy = dia_numero % 7 + 1
+                    pedidos = Pizzas.query.filter(func.DAYOFWEEK(Pizzas.fecha_pedido) == dia_index_sqlalchemy).all()
+            else:
+                dias_semana = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+                if any(busqueda_dia.lower() == d.lower() for d in dias_semana):
+                    dia_index = dias_semana.index(next(d for d in dias_semana if d.lower() == busqueda_dia.lower())) + 1
+                    dia_index_sqlalchemy = dia_index % 7 + 1
+                    pedidos = Pizzas.query.filter(func.DAYOFWEEK(Pizzas.fecha_pedido) == dia_index_sqlalchemy).all()
+
+        if busqueda_mes:
+            if busqueda_mes.isdigit():
+                mes_numero = int(busqueda_mes)
+                if 1 <= mes_numero <= 12:
+                    pedidos = Pizzas.query.filter(func.MONTH(Pizzas.fecha_pedido) == mes_numero).all()
+            else:
+                meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+                if any(busqueda_mes.lower() == m.lower() for m in meses):
+                    mes_numero = meses.index(next(m for m in meses if m.lower() == busqueda_mes.lower())) + 1
+                    pedidos = Pizzas.query.filter(func.MONTH(Pizzas.fecha_pedido) == mes_numero).all()
+
+        pedidos = [{'nombre': pedido.nombre, 'subtotal': pedido.subtotal, 'fecha': pedido.fecha_pedido.strftime("%Y-%m-%d")} for pedido in pedidos]
+        total_subtotal = sum(pedido['subtotal'] for pedido in pedidos)
+
+    return render_template("buscar_pedidos.html", pedidos=pedidos, total_subtotal=total_subtotal)
+
+@app.route("/deletep", methods=["POST"])
+def deletep():
+    selected_indices = request.form.get("selected_rows").split(",")
 
     with open("pizza.txt", "r") as archivo:
         lineas = archivo.readlines()
 
-    for linea in lineas:
-        datos = linea.strip().split("-")
-        nombre, direccion, telefono, num, tamanio, ingredientes, subtotal = datos
+    for index in sorted(selected_indices, reverse=True):
+        del lineas[int(index)]
+    with open("pizza.txt", "w") as archivo:
+        archivo.writelines(lineas)
+    return redirect(url_for("addp"))
 
-        pizza = Pizzas(
+@app.route("/confirmar_pedido", methods=["POST"])
+def confirmar_pedido():
+    subtotal_total = 0
+    fecha_pedido = None
+
+    with open("pizza.txt", "r") as archivo:
+        for linea in archivo:
+            datos = linea.strip().split("@")
+            subtotal_total += float(datos[7])
+            if fecha_pedido is None:
+                fecha_pedido = datos[6]
+
+    if subtotal_total > 0:
+        with open("pizza.txt", "r") as archivo:
+            primer_pedido = archivo.readline().strip().split("@")
+            nombre = primer_pedido[0]
+
+        pedido = Pizzas(
             nombre=nombre,
-            direccion=direccion,
-            telefono=telefono,
-            num=int(num),
-            tamanio=tamanio,
-            ingredientes=ingredientes,
-            subtotal=float(subtotal),
-            create_date=datetime.now()
+            fecha_pedido=fecha_pedido,
+            subtotal=subtotal_total
         )
-        db.session.add(pizza)
+        db.session.add(pedido)
+        db.session.commit()
 
-    db.session.commit()
+        open("pizza.txt", "w").close()
 
-    open("pizza.txt", "w").close()
-
-    flash("¡Pedido registrado exitosamente!", "success")
+        flash("¡Pedido registrado exitosamente!", "success")
+    else:
+        flash("No se encontraron pedidos para confirmar.", "warning")
 
     return redirect(url_for("addp"))
 
-@app.route("/pedidos_del_dia")
-def pedidos_del_dia():
 
+@app.route("/pedidosdd", methods=["GET", "POST"])
+def pedidosdd():
     fecha_actual = date.today()
+    pedidos = Pizzas.query.filter(func.DATE(Pizzas.fecha) == fecha_actual).all()
+    total_ventas = db.session.query(func.sum(Pizzas.subtotal)).filter(func.DATE(Pizzas.fecha) == fecha_actual).scalar()
 
-    pedidos = Pizzas.query.filter(Pizzas.create_date == fecha_actual).all()
+    return render_template("pizza.html", pedidos=pedidos, total_ventas=total_ventas)
 
-    total_ventas = sum(pedido.subtotal for pedido in pedidos)
 
-  
-    return render_template("pedidosdeldia.html", pedidos=pedidos, total_ventas=total_ventas)
 
-@app.route("/ABC_CompletoMaestros",methods=["GET","POST"])
+@app.route("/ABC_CompletoMestros", methods=["GET", "POST"])
 def ABCompleto():
     maestro=""
     

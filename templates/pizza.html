@@ -1,79 +1,150 @@
-{%extends "layout2.html"%}
-{%block content %}
+{% extends "layout2.html" %}
 {% import "_macros.html" as macros %}
-<div style="display: flex; justify-content: space-between;">
-    <div style="width: 48%;">
-        <h1>Nuevo Pedido</h1>
-        <form action="/addp" method="post">
-            {{macros.input_Form(form.nombre, class="form-control")}}
-            {{macros.input_Form(form.direccion, class="form-control")}}
-            {{macros.input_Form(form.telefono, class="form-control")}}
-            {{macros.input_Form(form.num, class="form-control")}}
-            <div class="control-group">
-                <label for="tamanio">Elige el tamaño</label>
-                <input type="radio" id="opcion1" name="tamanio" value="chica" checked>Chica $40
-                <input type="radio" id="opcion2" name="tamanio" value="mediana">Mediana $80
-                <input type="radio" id="opcion3" name="tamanio" value="mediana">Grande $120
-            </div>
-            <div class="control-group">
-                <label for="ingredientes">Elige los ingredientes</label>
-                <input type="checkbox" id="op1" name="ingredientes" value="jamon" checked>Jamón $10 
-                <input type="checkbox" id="op2" name="ingredientes" value="pina">Piña $10
-                <input type="checkbox" id="op3" name="ingredientes" value="champiniones">Champiñones $10
-            </div>
-            <input type="hidden", name ="csrf_token" value="{{csrf_token()}}"/>
-            <button type="submit" class="btn btn-primary">GUARDAR</button>
-        </form>
-    </div>
-    <div style="width: 48%;">
-        <h1>Pedidos de Pizza</h1>
-        <table border="1">
-            <tr>
-                <th>Nombre</th>
-                <th>Dirección</th>
-                <th>Teléfono</th>
-                <th>Número de Pizzas</th>
-                <th>Tamaño</th>
-                <th>Ingredientes</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-            {% for index, dato in datos %}
-            <tr>
-                <td>{{ dato[0] }}</td>
-                <td>{{ dato[1] }}</td>
-                <td>{{ dato[2] }}</td>
-                <td>{{ dato[3] }}</td>
-                <td>{{ dato[4] }}</td>
-                <td>{{ dato[5] }}</td>
-                <td>{{ dato[6] }}</td>
-                <td>
-                    <form action="/addp" method="post">
-                        <input type="hidden" name="delete" value="{{ index }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <button type="submit">Eliminar</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
-</div>
-<button type="button" id="btn-terminar" class="btn btn-primary">Terminar</button>
-                <input type="hidden" name="confirmar" id="confirmar" value="false">
-                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+{% from "_macros.html" import render_field %}
+{% block content %}  
+    <style>
+        .selected-row {
+            background-color: #ff6961;
+        }
+    </style>
+    <div style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+            <h1>Nuevo Pedido</h1>
+            <form action="/addp" method="post">
+                {{macros.input_Form(form.nombre, class="form-control", value=nombre)}}
+                {{macros.input_Form(form.direccion, class="form-control", value=direccion)}}
+                {{macros.input_Form(form.telefono, class="form-control", value=telefono)}}
+                {{macros.input_Form(form.num, class="form-control", value=num)}}
+                {{macros.input_Form(form.fecha, class="form-control", value=fecha_pedido)}}
+                <div class="control-group">
+                    <label for="tamanio">Elige el tamaño</label>
+                    <input type="radio" id="opcion1" name="tamanio" value="chica" checked>Chica $40
+                    <input type="radio" id="opcion2" name="tamanio" value="mediana">Mediana $80
+                    <input type="radio" id="opcion3" name="tamanio" value="grande">Grande $120
+                </div>
+                <div class="control-group">
+                    <label for="ingredientes">Elige los ingredientes</label>
+                    <input type="checkbox" id="op1" name="ingredientes" value="jamón" checked>Jamón $10 
+                    <input type="checkbox" id="op2" name="ingredientes" value="piña">Piña $10
+                    <input type="checkbox" id="op3" name="ingredientes" value="champiñones">Champiñones $10
+                </div>
+                <input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+                <input type="submit" class="btn btn-primary" name="btn1" value="Añadir Pedidos">
             </form>
         </div>
         <div style="width: 48%;">
+            <h3 class="text-center">PEDIDOS A CONFIRMAR</h3>
+            <div class="table-responsive">
+                <table id="pedido-table" class="table table-bordered ">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">NOMBRE</th>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">DIRECCION</th>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">TELEFONO</th>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">NUMERO DE PIZZAS</th>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">TAMAÑO</th>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">INGREDIENTES</th>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">Fecha</th>
+                            <th class="text-center" style="background-color: #0404e2; color: #ffff;">SUBTOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for index, dato in datos %}
+                        <tr data-index="{{ index }}">
+                            <td>{{ dato[0] }}</td>
+                            <td>{{ dato[1] }}</td>
+                            <td>{{ dato[2] }}</td>
+                            <td>{{ dato[3] }}</td>
+                            <td>{{ dato[4] }}</td>
+                            <td>{{ dato[5] }}</td>
+                            <td>{{ dato[6] }}</td>
+                            <td>{{ dato[7] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <form id="delete-form" action="/deletep" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="selected_rows" id="selected-rows" value="" />
+            </form>
+            <button type="button" onclick="deleteSelectedRows()" class="btn btn-danger">Eliminar Pedidos Seleccionados</button>
+            <button type="button" id="btn-terminar" class="btn btn-success">Confirmar Pedido</button>
+            <input type="hidden" name="confirmar" id="confirmar" value="false">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         </div>
     </div>
-
-    <script>
+    <div class="container" style="display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+           <h3 class="text-center">Ventas del día</h3>
+           <table class="table table-bordered">
+               <thead class="thead-dark">
+                   <tr>
+                       <th class="text-center" style="background-color: #343a40; color: #fff;">Nombre</th>
+                       <th class="text-center" style="background-color: #343a40; color: #fff;">Total</th>
+                   </tr>
+               </thead>
+               <tbody>
+                   {% for pedido in pedidos %}
+                   <tr>
+                       <td>{{ pedido.nombre }}</td>
+                       <td>{{ pedido.subtotal }}</td>
+                   </tr>
+                   {% endfor %}
+               </tbody>
+               <tfoot>
+                   <tr>
+                       <th class="text-center" style="background-color: #c3d48b; color: #fff;">Ventas totales del dia:</th>
+                       <th class="text-center" style="background-color: #c3d48b; color: #fff;">{{ total_ventas }}</th>
+                   </tr>
+               </tfoot>
+           </table>
+           <div style="width: 48%;">
+            <form action="/buscar_pedidos" method="get">
+                <button type="submit" class="btn btn-warning">Consultar Ventas Totales Por Dia o Mes</button>
+            </form>
+         </div>
+        </div>
+        </div>
+     </div>
+     <script>
         document.getElementById("btn-terminar").addEventListener("click", function() {
-            if (confirm("¿Desea confirmar el pedido?")) {
+            var selectedRows = document.querySelectorAll('.selected-row');
+            var subtotal = 0;
+            selectedRows.forEach(function(row) {
+              
+                var subtotalRow = parseFloat(row.cells[row.cells.length - 1].textContent); // Última celda
+              
+                subtotal += subtotalRow;
+            });
+           
+            var totalPedidos = {{ total_pedidos }};
+            
+            if (confirm("¿Desea confirmar el pedido?\n\nTotal de todos los pedidos: $" + totalPedidos.toFixed(2) )) {
                 document.forms[0].action = "/confirmar_pedido";
                 document.forms[0].submit();
             }
         });
     </script>
-   {%endblock%}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const pedidoTable = document.getElementById('pedido-table');
+            pedidoTable.addEventListener('click', function (event) {
+                const row = event.target.closest('tr');
+                if (row && row.parentNode.nodeName !== 'THEAD') { 
+                    row.classList.toggle('selected-row');
+                }
+            });
+        });
+    
+        function deleteSelectedRows() {
+            const selectedRows = document.querySelectorAll('.selected-row');
+            if (selectedRows.length > 0 && confirm('¿Está seguro de que desea eliminar los pedidos seleccionados?')) {
+                const selectedRowsIndices = Array.from(selectedRows).map(row => row.getAttribute('data-index')).join(',');
+                document.getElementById('selected-rows').value = selectedRowsIndices;
+                document.getElementById('delete-form').submit();
+            }
+        }
+    </script>
+    
+{% endblock %}

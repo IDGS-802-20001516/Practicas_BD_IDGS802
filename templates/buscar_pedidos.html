@@ -1,0 +1,46 @@
+{% extends "layout2.html" %}
+{% block content %}
+<div class="container">
+    <h2>Buscar Ventas</h2>
+    <form method="post" action="/buscar_pedidos">
+        <label for="busqueda_dia">Buscar por día:</label>
+        <input type="text" id="busqueda_dia" name="busqueda_dia">
+        <button type="submit">Buscar</button>
+        <input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+    </form>
+
+    <form method="post" action="/buscar_pedidos">
+        <label for="busqueda_mes">Buscar por mes:</label>
+        <input type="text" id="busqueda_mes" name="busqueda_mes">
+        <button type="submit">Buscar</button>
+        <input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+    </form>
+    <hr>
+    <h3>Ventas Encontradas</h3>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Subtotal</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pedido in pedidos %}
+            <tr>
+                <td>{{ pedido.nombre }}</td>
+                <td>{{ pedido.subtotal }}</td>
+                <td>{{ pedido.fecha }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th>Total</th>
+                <th>{{ total_subtotal }}</th>
+                <th></th>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}
